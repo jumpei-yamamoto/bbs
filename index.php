@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>掲示板</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .break-words {
+            word-break: break-word;
+            white-space: pre-wrap; /* 改行をそのまま表示 */
+        }
+    </style>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto flex">
@@ -18,6 +24,7 @@
             <?php
             $categories = array_filter(glob('threads/*'), 'is_dir');
             $selectedCategory = isset($_GET['category']) ? $_GET['category'] : (isset($categories[0]) ? basename($categories[0]) : '');
+            $searchQuery = isset($_GET['search']) ? $_GET['search'] : '';
 
             if ($selectedCategory) {
                 echo '<h2 class="text-xl font-bold mb-4">スレッド一覧 (' . htmlspecialchars($selectedCategory) . ')</h2>';
@@ -40,7 +47,7 @@
                 }
                 echo '</ul>';
             } else {
-                echo '<p class="text-red-500">カテゴリが選択されていません。</p>';
+                echo '<p class="text-red-500">カテゴリが存在しません。</p>';
             }
             ?>
 
@@ -57,6 +64,39 @@
                     <input type="submit" value="作成" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700">
                 </div>
             </form>
+
+            <?php
+            if ($searchQuery) {
+                echo '<hr class="my-6">';
+                echo '<h2 class="text-xl font-bold mb-4">検索結果</h2>';
+                echo '<ul class="list-disc pl-5 mb-4">';
+
+                $resultsFound = false;
+                
+                foreach ($categories as $category) {
+                    $categoryName = basename($category);
+                    $threads = glob('threads/' . urlencode($categoryName) . '/*.txt');
+                    foreach ($threads as $thread) {
+                        $threadName = basename($thread, '.txt');
+                        $lines = file($thread, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                        foreach ($lines as $line) {
+                            list($date, $name, $message) = explode(',', $line);
+                            if (stripos($message, $searchQuery) !== false) {
+                                echo '<li><a href="thread.php?category=' . urlencode($categoryName) . '&thread=' . urlencode($threadName) . '" class="text-blue-500 hover:underline">スレッド: ' . htmlspecialchars($threadName) . ' - ' . htmlspecialchars($message) . '</a></li>';
+                                $resultsFound = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!$resultsFound) {
+                    echo '<p class="text-red-500">該当スレッドが見つかりませんでした。</p>';
+                }
+
+                echo '</ul>';
+            }
+            ?>
         </div>
     </div>
 </body>
